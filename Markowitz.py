@@ -70,7 +70,6 @@ class EqualWeightPortfolio:
 
         # Initialize the portfolio weights DataFrame with equal weights
         self.portfolio_weights = pd.DataFrame(equal_weight, index=df.index, columns=assets)
-        print("hello")
         """
         TODO: Complete Task 1 Above
         """
