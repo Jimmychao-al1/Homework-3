@@ -70,11 +70,14 @@ class EqualWeightPortfolio:
 
         # Initialize the portfolio weights DataFrame with equal weights
         self.portfolio_weights = pd.DataFrame(equal_weight, index=df.index, columns=assets)
+        self.portfolio_weights[self.exclude] = 0.0
+        self.portfolio_weights = self.portfolio_weights[df.columns]
         """
         TODO: Complete Task 1 Above
         """
         self.portfolio_weights.ffill(inplace=True)
         self.portfolio_weights.fillna(0, inplace=True)
+
 
     def calculate_portfolio_returns(self):
         # Ensure weights are calculated
@@ -94,7 +97,7 @@ class EqualWeightPortfolio:
         # Ensure portfolio returns are calculated
         if not hasattr(self, "portfolio_returns"):
             self.calculate_portfolio_returns()
-
+        
         return self.portfolio_weights, self.portfolio_returns
 
 
@@ -120,7 +123,36 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Below
         """
+        # Calculate daily returns
+        returns = df[assets].pct_change().dropna()
 
+        # Calculate the volatility (standard deviation) of each asset
+        rolling_volatilities = returns.rolling(window=252).std()
+
+        # Initialize a DataFrame to store the weights
+        weights = pd.DataFrame(index=rolling_volatilities.index, columns=assets)
+
+        # Calculate the inverse of the volatility for each asset
+        inverse_volatilities = 1.0 / rolling_volatilities
+
+        # Normalize the inverse volatilities to get weights for each date
+        for date in inverse_volatilities.index:
+            daily_inv_vol = inverse_volatilities.loc[date].dropna()
+            weights.loc[date, assets] = daily_inv_vol / daily_inv_vol.sum()
+
+        # Reindex weights to match the original DataFrame's date range and fill missing values
+        weights = weights.reindex(df.index).fillna(method='ffill').fillna(0)
+
+        # Assign calculated weights to the portfolio_weights DataFrame
+        for asset in assets:
+            self.portfolio_weights[asset] = weights[asset]
+
+        # Add the excluded column back with zero values
+        self.portfolio_weights[self.exclude] = 0.0
+
+        # Reorder the columns to match the original DataFrame
+        self.portfolio_weights = self.portfolio_weights[df.columns]
+        
         """
         TODO: Complete Task 2 Above
         """
@@ -395,6 +427,8 @@ class AssignmentJudge:
 
     def check_answer_eqw(self, eqw_dataframe):
         answer_dataframe = pd.read_pickle(self.eqw_path)
+        print(answer_dataframe)
+        print(eqw_dataframe)
         if self.compare_dataframe(answer_dataframe, eqw_dataframe):
             print("Problem 1 Complete - Get 10 Points")
             return 10
@@ -404,6 +438,8 @@ class AssignmentJudge:
 
     def check_answer_rp(self, rp_dataframe):
         answer_dataframe = pd.read_pickle(self.rp_path)
+        print(answer_dataframe)
+        print(rp_dataframe)
         if self.compare_dataframe(answer_dataframe, rp_dataframe):
             print("Problem 2 Complete - Get 10 Points")
             return 10
