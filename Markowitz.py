@@ -127,7 +127,7 @@ class RiskParityPortfolio:
         returns = df[assets].pct_change().dropna()
 
         # Calculate the volatility (standard deviation) of each asset
-        rolling_volatilities = returns.rolling(window=252).std()
+        rolling_volatilities = returns.rolling(window=self.lookback).std()
 
         # Initialize a DataFrame to store the weights
         weights = pd.DataFrame(index=rolling_volatilities.index, columns=assets)
@@ -156,7 +156,6 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Above
         """
-
         self.portfolio_weights.ffill(inplace=True)
         self.portfolio_weights.fillna(0, inplace=True)
 
@@ -224,11 +223,15 @@ class MeanVariancePortfolio:
                 """
                 TODO: Complete Task 3 Below
                 """
-
+                w = model.addMVar(n, name="w", lb=0.0, ub=1.0)
                 # Sample Code: Initialize Decision w and the Objective
                 # NOTE: You can modify the following code
-                w = model.addMVar(n, name="w", ub=1)
-                model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+                portfolio_return = mu @ w
+                portfolio_variance = w @ Sigma @ w
+                model.setObjective(portfolio_return - (gamma / 2) * portfolio_variance, gp.GRB.MAXIMIZE)
+
+                # Add constraint: sum of weights is 1
+                model.addConstr(w.sum() == 1, name="weight_sum")
 
                 """
                 TODO: Complete Task 3 Below
