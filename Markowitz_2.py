@@ -80,25 +80,21 @@ class MyPortfolio:
             mean_returns = current_returns.mean()
             cov_matrix = current_returns.cov()
 
-            # 使用 self.gamma 作为风险厌恶系数
             gamma = self.gamma
 
-            # 目标函数: 最大化 Sharpe 比率
+
             def objective(weights):
                 portfolio_return = np.dot(weights, mean_returns)
                 portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
                 sharpe_ratio = (portfolio_return - gamma * portfolio_volatility)
-                return -sharpe_ratio  # 最大化 Sharpe 比率
+                return -sharpe_ratio  
 
-            # 约束条件: 权重之和为1，且非负 (不允许卖空)
             constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
             bounds = tuple((0, 1) for asset in assets)
             initial_guess = len(assets) * [1. / len(assets),]
 
-            # 优化
             result = minimize(objective, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
 
-            # 保存权重
             self.portfolio_weights.iloc[i, self.price.columns != self.exclude] = result.x
         """
         TODO: Complete Task 4 Above
