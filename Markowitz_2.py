@@ -9,7 +9,7 @@ import quantstats as qs
 import gurobipy as gp
 import warnings
 import argparse
-
+from scipy.optimize import minimize
 """
 Project Setup
 """
@@ -55,7 +55,7 @@ class MyPortfolio:
     NOTE: You can modify the initialization function
     """
 
-    def __init__(self, price, exclude, lookback=50, gamma=0):
+    def __init__(self, price, exclude, lookback=50, gamma=0.1):
         self.price = price
         self.returns = price.pct_change().fillna(0)
         self.exclude = exclude
@@ -74,7 +74,32 @@ class MyPortfolio:
         """
         TODO: Complete Task 4 Below
         """
+        for i in range(self.lookback + 1, len(self.price)):
+            # Lookback period data
+            current_returns = self.returns.copy()[assets].iloc[i-self.lookback:i]
+            mean_returns = current_returns.mean()
+            cov_matrix = current_returns.cov()
 
+            # 使用 self.gamma 作为风险厌恶系数
+            gamma = self.gamma
+
+            # 目标函数: 最大化 Sharpe 比率
+            def objective(weights):
+                portfolio_return = np.dot(weights, mean_returns)
+                portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+                sharpe_ratio = (portfolio_return - gamma * portfolio_volatility)
+                return -sharpe_ratio  # 最大化 Sharpe 比率
+
+            # 约束条件: 权重之和为1，且非负 (不允许卖空)
+            constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+            bounds = tuple((0, 1) for asset in assets)
+            initial_guess = len(assets) * [1. / len(assets),]
+
+            # 优化
+            result = minimize(objective, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
+
+            # 保存权重
+            self.portfolio_weights.iloc[i, self.price.columns != self.exclude] = result.x
         """
         TODO: Complete Task 4 Above
         """
@@ -184,6 +209,7 @@ class AssignmentJudge:
         return 0
 
     def check_portfolio_position(self, portfolio_weights):
+        print(portfolio_weights)
         if (portfolio_weights.sum(axis=1) <= 1.01).all():
             return True
         print("Portfolio Position Exceeds 1. No Leverage.")
