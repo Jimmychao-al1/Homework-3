@@ -123,35 +123,12 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Below
         """
-        # Calculate daily returns
-        returns = df[assets].pct_change().dropna()
-
-        # Calculate the volatility (standard deviation) of each asset
-        rolling_volatilities = returns.rolling(window=self.lookback).std()
-
-        # Initialize a DataFrame to store the weights
-        weights = pd.DataFrame(index=rolling_volatilities.index, columns=assets)
-
-        # Calculate the inverse of the volatility for each asset
-        inverse_volatilities = 1.0 / rolling_volatilities
-
-        # Normalize the inverse volatilities to get weights for each date
-        for date in inverse_volatilities.index:
-            daily_inv_vol = inverse_volatilities.loc[date].dropna()
-            weights.loc[date, assets] = daily_inv_vol / daily_inv_vol.sum()
-
-        # Reindex weights to match the original DataFrame's date range and fill missing values
-        weights = weights.reindex(df.index).fillna(method='ffill').fillna(0)
-
-        # Assign calculated weights to the portfolio_weights DataFrame
-        for asset in assets:
-            self.portfolio_weights[asset] = weights[asset]
-
-        # Add the excluded column back with zero values
-        self.portfolio_weights[self.exclude] = 0.0
-
-        # Reorder the columns to match the original DataFrame
-        self.portfolio_weights = self.portfolio_weights[df.columns]
+        for i in range(self.lookback + 1, len(df)):
+            R_n = df_returns.copy()[assets].iloc[i - self.lookback : i]
+            mot = R_n.std().rdiv(1).sum()
+            for asset in assets:
+                return_asset = df_returns.copy()[asset].iloc[i - self.lookback: i]
+                self.portfolio_weights.loc[df.index[i], asset] = 1/return_asset.std()/mot
         
         """
         TODO: Complete Task 2 Above
@@ -430,8 +407,6 @@ class AssignmentJudge:
 
     def check_answer_eqw(self, eqw_dataframe):
         answer_dataframe = pd.read_pickle(self.eqw_path)
-        print(answer_dataframe)
-        print(eqw_dataframe)
         if self.compare_dataframe(answer_dataframe, eqw_dataframe):
             print("Problem 1 Complete - Get 10 Points")
             return 10
